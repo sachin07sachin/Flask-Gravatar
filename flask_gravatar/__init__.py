@@ -18,16 +18,35 @@
 
 import hashlib
 
-from flask import _request_ctx_stack, current_app, has_request_context, request
+# from flask import _request_ctx_stack, current_app, has_request_context, request
+
+# from .version import __version__
+
+# try:
+#     from flask import _app_ctx_stack, has_app_context
+# except ImportError:  # pragma: no cover
+#     _app_ctx_stack = None
+#     has_app_context = None
+
+from flask import current_app, has_request_context, request
 
 from .version import __version__
 
+
 try:
+    # Try the modern app context stack
     from flask import _app_ctx_stack, has_app_context
-except ImportError:  # pragma: no cover
+except ImportError: # pragma: no cover
+    # If app context stack fails (very old Flask)
     _app_ctx_stack = None
     has_app_context = None
 
+try:
+    # Now try the old request context stack privately, it will fail on Flask 2.3+
+    from flask import _request_ctx_stack
+except ImportError: # pragma: no cover
+    # If the old stack fails (Flask 2.3+), define it as None
+    _request_ctx_stack = None
 
 # Which stack should we use? _app_ctx_stack is new in 0.9
 connection_stack = _app_ctx_stack or _request_ctx_stack
