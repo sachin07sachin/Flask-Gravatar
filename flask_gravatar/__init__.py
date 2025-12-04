@@ -24,24 +24,24 @@ from .version import __version__
 
 try:
     # FIX: Safely attempt to import the deprecated object.
-    # This will succeed on older Flask versions but raise ImportError on Flask 2.3+.
+    # Try the old request context stack; removed in Flask 2.3+.
     from flask import _request_ctx_stack
-except ImportError: # pragma: no cover
-    # Define as None to gracefully handle Flask 2.3+ where this object was removed.
+except ImportError:  # pragma: no cover
+    # Define as None to handle Flask 2.3+ where this object was removed.
     _request_ctx_stack = None
 
 try:
     # Try the modern app context stack
     from flask import _app_ctx_stack, has_app_context
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     # If app context stack fails (very old Flask)
     _app_ctx_stack = None
     has_app_context = None
 
 
-
 # Which stack should we use? _app_ctx_stack is new in 0.9
 connection_stack = _app_ctx_stack or _request_ctx_stack
+
 
 def has_context():
     """Return True if either an app or a request context is active.
@@ -140,7 +140,6 @@ class Gravatar(object):
         """
         for key in tuple(kwargs.keys()):
             # Only set if the class actually defines this attribute
-            # (so the Property descriptor is used instead of creating a plain attribute)
             if hasattr(self.__class__, key):
                 setattr(self, key, kwargs.pop(key))
         self.app = None
@@ -149,7 +148,7 @@ class Gravatar(object):
             self.init_app(app, **kwargs)
 
     def init_app(self, app):
-        """Initialize the Flask-Gravatar extension for the specified application.
+        """Initialize the Flask-Gravatar extension for the given application.
 
         :param app: The application.
         """
@@ -208,5 +207,6 @@ class Gravatar(object):
             link = link + '&f=y'
 
         return link
+
 
 __all__ = ('Gravatar', '__version__')
