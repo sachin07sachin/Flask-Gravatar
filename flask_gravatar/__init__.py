@@ -18,20 +18,17 @@
 
 import hashlib
 
-# from flask import _request_ctx_stack, current_app, has_request_context, request
-
-# from .version import __version__
-
-# try:
-#     from flask import _app_ctx_stack, has_app_context
-# except ImportError:  # pragma: no cover
-#     _app_ctx_stack = None
-#     has_app_context = None
-
 from flask import current_app, has_request_context, request
 
 from .version import __version__
 
+try:
+    # FIX: Safely attempt to import the deprecated object.
+    # This will succeed on older Flask versions but raise ImportError on Flask 2.3+.
+    from flask import _request_ctx_stack
+except ImportError: # pragma: no cover
+    # Define as None to gracefully handle Flask 2.3+ where this object was removed.
+    _request_ctx_stack = None
 
 try:
     # Try the modern app context stack
@@ -41,16 +38,36 @@ except ImportError: # pragma: no cover
     _app_ctx_stack = None
     has_app_context = None
 
-try:
-    # Now try the old request context stack privately, it will fail on Flask 2.3+
-    from flask import _request_ctx_stack
-except ImportError: # pragma: no cover
-    # If the old stack fails (Flask 2.3+), define it as None
-    _request_ctx_stack = None
+
 
 # Which stack should we use? _app_ctx_stack is new in 0.9
 connection_stack = _app_ctx_stack or _request_ctx_stack
-has_context = has_app_context or has_request_context
+
+def has_context():
+    """Return True if either an app or a request context is active.
+
+    Some Flask versions may not provide both helpers at import time, so
+    check callability before calling them.
+    """
+    app_ctx_check = globals().get('has_app_context')
+    req_ctx_check = globals().get('has_request_context')
+
+    if callable(app_ctx_check):
+        try:
+            if app_ctx_check():
+                return True
+        except Exception:
+            # defensive: if the helper raises for some reason, ignore it
+            pass
+
+    if callable(req_ctx_check):
+        try:
+            if req_ctx_check():
+                return True
+        except Exception:
+            pass
+
+    return False
 
 
 class Property(object):
@@ -62,9 +79,23 @@ class Property(object):
 
     def __get__(self, obj, objtype):
         """Return value from application config, instance value or default."""
-        if self.key and has_context() and self.key in current_app.config:
-            return current_app.config[self.key]
-        return getattr(obj, self.key, self.default)
+        # Prefer the value from current_app.config when an app context exists.
+        try:
+            if self.key and self.key in current_app.config:
+                return current_app.config[self.key]
+        except RuntimeError:
+            # Accessing current_app outside app context raises RuntimeError.
+            # We'll fall back to instance or default below.
+            pass
+
+        # If the Config check failed or there is no app context, then
+        # check for an instance override (only if the instance exists).
+        if obj is not None:
+            if hasattr(obj, self.key):
+                return getattr(obj, self.key)
+
+        # Fallback to the default value defined on the descriptor.
+        return self.default
 
     def __set__(self, obj, val):
         """Set instance value."""
@@ -108,9 +139,10 @@ class Gravatar(object):
         :param base_url: Use custom base url for build link
         """
         for key in tuple(kwargs.keys()):
-            if hasattr(self, key):
+            # Only set if the class actually defines this attribute
+            # (so the Property descriptor is used instead of creating a plain attribute)
+            if hasattr(self.__class__, key):
                 setattr(self, key, kwargs.pop(key))
-
         self.app = None
 
         if app is not None:

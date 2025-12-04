@@ -23,23 +23,26 @@ tests_require = [
     'pydocstyle>=1.0.0',
     'pytest-cache>=1.0',
     'pytest-cov>=1.8.0',
-    'pytest-pep8>=1.0.6',
+    # 'pytest-pep8>=1.0.6', # Removed deprecated plugin
     'pytest>=2.8.0',
+    'flake8', # Added to ensure comprehensive PEP 8 style checking
 ]
+
 
 extras_require = {
     'docs': [
         'Sphinx>=1.4.2',
-    ],
-    'tests': tests_require,
-}
+        'pygments', # Added to fix ModuleNotFoundError when building docs
+        ],
+        'tests': tests_require,
+        }
 
 extras_require['all'] = []
 for reqs in extras_require.values():
     extras_require['all'].extend(reqs)
 
 setup_requires = [
-    'pytest-runner>=2.6.2',
+    # 'pytest-runner>=2.6.2', # Removed deprecated dependency
 ]
 
 install_requires = [
@@ -71,8 +74,9 @@ setup(
     platforms='any',
     extras_require=extras_require,
     install_requires=install_requires,
-    setup_requires=setup_requires,
-    tests_require=tests_require,
+    # REMOVED DEPRECATED ARGUMENTS (tests_require and setup_requires)
+    # setup_requires=setup_requires,
+    # tests_require=tests_require,
     classifiers=[
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
@@ -82,12 +86,15 @@ setup(
         'Framework :: Flask',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
+        # Dropped EOL Python Versions (2.x, 3.4-3.7)
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.8', # New minimum supported version
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13', 
+        'Programming Language :: Python :: 3.14',
         'Development Status :: 5 - Production/Stable',
     ],
 )
